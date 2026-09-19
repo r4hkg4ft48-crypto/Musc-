@@ -1,10 +1,10 @@
-import os, re, time, hashlib, asyncio
+import os, re, time, hashlib, asyncio, json
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List, Dict
 
 import httpx
-from fastapi import FastAPI, Query
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware\nfrom fastapi.responses import Response
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
@@ -13,7 +13,7 @@ try:
 except Exception:
     OpenAI = None
 
-app = FastAPI(title="Volna Live Intelligence", version="0.5.0")
+app = FastAPI(title="Volna Live Intelligence", version="0.6.0")
 origins=[x.strip() for x in os.getenv("CORS_ORIGINS","*").split(",") if x.strip()]
 app.add_middleware(CORSMiddleware,allow_origins=origins,allow_credentials=False,allow_methods=["GET"],allow_headers=["*"])
 
@@ -31,7 +31,7 @@ for src in [x.strip() for x in os.getenv("TELEGRAM_EXTRA_SOURCES","").split(",")
     TELEGRAM_SOURCES.append({"username":src if src.startswith("@") else "@"+src,"kind":"general","trust":float(os.getenv("TG_TRUST_EXTRA","0.55"))})
 
 SOURCE_TRUST={"yandex_weather":0.96,"open_meteo_ecmwf":0.91,"coingecko":0.97}
-_cache={"ts":0.0,"key":None,"value":None}
+_cache={"ts":0.0,"key":None,"value":None}\n_profiles={}
 _tg=None
 
 URGENT=re.compile(r"(?i)срочно|молни[яи]|экстренн|чрезвычайн|атак|взрыв|землетряс|цунами|эвакуац|обстрел|авари|катастроф|закрыт[ьи]|запрет|ставк[аи]|санкци|банкрот|дефолт")
