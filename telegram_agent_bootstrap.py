@@ -1,37 +1,34 @@
-import base64, io, os, pathlib, shutil, subprocess, sys, zipfile
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import base64
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+import zipfile
 
-PREFIX = "AGENT_PKG_"
+ROOT = pathlib.Path(__file__).resolve().parent
+PAYLOAD = ROOT / "agent_payload" / "full.b64"
 TARGET = pathlib.Path("/tmp/telegram_ai_agent")
-
-def package_parts():
-    items = [(k, v) for k, v in os.environ.items() if k.startswith(PREFIX) and v]
-    return [v for k, v in sorted(items)]
-
-def placeholder():
-    class H(BaseHTTPRequestHandler):
-        def do_GET(self):
-            body = b"Telegram AI Agent bootstrap ready"
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-        def log_message(self, *_):
-            pass
-    HTTPServer(("0.0.0.0", int(os.environ.get("PORT", "10000"))), H).serve_forever()
+ENC = pathlib.Path("/tmp/telegram_ai_agent.enc")
+ZIP = pathlib.Path("/tmp/telegram_ai_agent.zip")
 
 def main():
-    parts = package_parts()
-    if not parts:
-        placeholder()
-        return
+    key = os.environ.get("AGENT_PACKAGE_KEY", "").strip()
+    if not key:
+        raise RuntimeError("AGENT_PACKAGE_KEY is not configured")
+    if not PAYLOAD.exists():
+        raise RuntimeError("Encrypted agent payload is missing")
 
-    raw = base64.b64decode("".join(parts))
+    ENC.write_bytes(base64.b64decode(PAYLOAD.read_text(encoding="utf-8").strip()))
+    subprocess.check_call([
+        "openssl", "enc", "-d", "-aes-256-cbc", "-pbkdf2",
+        "-in", str(ENC), "-out", str(ZIP), "-pass", "env:AGENT_PACKAGE_KEY"
+    ])
+
     if TARGET.exists():
         shutil.rmtree(TARGET)
     TARGET.mkdir(parents=True)
-    with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+    with zipfile.ZipFile(ZIP) as zf:
         zf.extractall(TARGET)
 
     req = TARGET / "requirements.txt"
@@ -41,6 +38,7 @@ def main():
     start = TARGET / "cloud_start.sh"
     if not start.exists():
         raise RuntimeError("cloud_start.sh missing from cloud package")
+
     os.chdir(TARGET)
     os.execv("/bin/bash", ["bash", str(start)])
 
