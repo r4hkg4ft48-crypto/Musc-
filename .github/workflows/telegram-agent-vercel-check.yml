@@ -1,0 +1,25 @@
+name: Telegram Agent Vercel Check
+
+on:
+  push:
+    paths:
+      - 'telegram-agent-vercel/**'
+      - '.github/workflows/telegram-agent-vercel-check.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: telegram-agent-vercel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: telegram-agent-vercel/package.json
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
