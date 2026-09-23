@@ -35,10 +35,17 @@ async function handleUpdate(update: TelegramUpdate) {
         await sendMessage(chatId, 'Неверный код привязки. Возьми последние 8 символов токена BotFather и отправь: /bind XXXXXXXX');
         return;
       }
-      await bindOwner(userId);
-      await sendMessage(chatId, '✅ Владелец привязан. Теперь этот Telegram-аккаунт единственный, кто может управлять агентом.\n\nОтправь /status или просто напиши задачу.');
+
+      try {
+        await bindOwner(userId);
+        await sendMessage(chatId, '✅ Владелец привязан. Теперь этот Telegram-аккаунт единственный, кто может управлять агентом.\n\nОтправь /status или просто напиши задачу.');
+      } catch (error) {
+        const messageText = error instanceof Error ? error.message : 'Unknown error';
+        await sendMessage(chatId, `⚠️ Не удалось сохранить привязку владельца: ${messageText.slice(0, 500)}`);
+      }
       return;
     }
+
     await sendMessage(chatId, 'Агент ещё не привязан. Отправь /bind и последние 8 символов токена этого бота. Полный токен не присылай.');
     return;
   }
