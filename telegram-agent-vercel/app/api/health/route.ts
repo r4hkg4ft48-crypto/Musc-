@@ -1,4 +1,4 @@
-import { checkBlobHealth } from '@/lib/storage';
+import { checkBlobHealth } from '../../../lib/storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,6 +14,6 @@ export async function GET() {
     blobConfigured: blob.reachable,
     blobStoreLinked: blob.linked,
     blobAuth: blob.auth,
-    version: '1.1.0',
+    version: '1.1.1',
   });
 }
