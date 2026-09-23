@@ -9,9 +9,15 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+function canonicalProductionOrigin(request: Request): string {
+  const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (productionHost) return `https://${productionHost}`;
+  return new URL(request.url).origin;
+}
+
 export async function GET(request: Request) {
   try {
-    const origin = new URL(request.url).origin;
+    const origin = canonicalProductionOrigin(request);
     botToken();
 
     const bot = await getBotIdentity();
@@ -26,9 +32,10 @@ export async function GET(request: Request) {
         username: bot.username ?? null,
         firstName: bot.first_name,
       },
+      productionOrigin: origin,
       webhook,
       next: 'Открой этого Telegram-бота и отправь /bind плюс последние 8 символов токена BotFather.',
-      note: 'Полный токен, webhook secret и bind-код этот endpoint не показывает.',
+      note: 'Webhook всегда привязывается к публичному production domain, а не к временному deployment URL.',
     });
   } catch (error) {
     return Response.json(
