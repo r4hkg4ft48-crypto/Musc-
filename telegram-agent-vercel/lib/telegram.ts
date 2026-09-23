@@ -59,6 +59,38 @@ export async function setCommands() {
   });
 }
 
+export async function getBotIdentity() {
+  return telegramApi<{
+    id: number;
+    is_bot: boolean;
+    first_name: string;
+    username?: string;
+  }>('getMe');
+}
+
+export async function getWebhookDiagnostics(origin: string) {
+  const token = botToken();
+  const expectedUrl = `${origin}/api/telegram/${webhookPathSecret(token)}`;
+  const info = await telegramApi<{
+    url: string;
+    pending_update_count?: number;
+    last_error_date?: number;
+    last_error_message?: string;
+    max_connections?: number;
+    allowed_updates?: string[];
+  }>('getWebhookInfo');
+
+  return {
+    configured: Boolean(info.url),
+    matchesCurrentOrigin: info.url === expectedUrl,
+    pendingUpdateCount: info.pending_update_count ?? 0,
+    lastErrorAt: info.last_error_date ? new Date(info.last_error_date * 1000).toISOString() : null,
+    lastErrorMessage: info.last_error_message ?? null,
+    maxConnections: info.max_connections ?? null,
+    allowedUpdates: info.allowed_updates ?? [],
+  };
+}
+
 export async function sendChatAction(chatId: number, action = 'typing') {
   try { await telegramApi('sendChatAction', { chat_id: chatId, action }); } catch {}
 }
